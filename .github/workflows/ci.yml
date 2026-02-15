@@ -54,6 +54,12 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Build DB package
+        run: pnpm --filter @thundergate/db build
+
+      - name: Run migrations
+        run: pnpm --filter @thundergate/db db:migrate
+
       - name: Test
         run: pnpm test
 
