@@ -245,7 +245,7 @@ export const proxyRoute: FastifyPluginAsync = async (server) => {
       }).catch((err) => request.log.error(err, 'Failed to write audit log'))
 
       reply.code(response.status).send(response.body)
-    } catch (err) {
+    } catch {
       const latencyMs = Date.now() - startTime
 
       writeAuditLog({
