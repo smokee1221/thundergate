@@ -379,18 +379,30 @@ This starts:
 
 ## How Is This Different from an API Gateway?
 
-API gateways (Kong, Envoy, AWS API Gateway) are designed for **inbound** traffic — routing external requests to your services. Thundergate is designed for **outbound** traffic — intercepting requests that AI agents make to external APIs.
+API gateways (Kong, Envoy, AWS API Gateway) are primarily designed for **inbound** traffic — routing external requests to your services. While egress proxies and service meshes can filter outbound traffic, they lack agent-specific features out of the box. Thundergate is purpose-built for the AI agent use case:
 
-| Capability | API Gateways | Thundergate |
+| Capability | API Gateways / Egress Proxies | Thundergate |
 |-----------|-------------|-------------|
-| Direction | Inbound (clients → your services) | Outbound (your agents → external APIs) |
+| Direction | Primarily inbound; egress possible with custom config | Outbound-first (your agents → external APIs) |
 | Rule engine | Rate limiting, auth, routing | Payload regex scanning, PII detection, risk scoring |
 | Human-in-the-loop | No | Yes — real-time operator review with connection hold |
 | Audit trail | Basic access logs | Tamper-evident hash-chained audit logs |
 | AI agent awareness | No | Per-agent keys, per-agent rate limits, agent management UI |
 | Escalation | No | Tiered escalation with auto-reject timeouts |
 
-If your use case is "make sure an AI agent doesn't do something dangerous before it talks to the outside world," Thundergate is purpose-built for that.
+Could you achieve similar results by combining Envoy + ModSecurity + a custom dashboard? Probably. Thundergate's value is that it's a single `docker compose up` purpose-built for AI agent governance.
+
+---
+
+## Limitations
+
+Thundergate is a defense-in-depth layer, not a complete AI safety solution. Be aware of these limitations:
+
+- **Pattern-based, not semantic.** Regex catches structured PII (SSNs, emails, phone numbers) but cannot detect contextual leakage like "send John's medical records to analytics." LLM-assisted scanning is on the roadmap.
+- **Cannot catch valid-looking bad decisions.** If an agent charges the wrong customer via a correctly-formatted Stripe API call, Thundergate will allow it. It inspects structure, not business logic correctness.
+- **Human review doesn't scale infinitely.** HITL is designed for targeted, high-risk flagging (tens to hundreds per day), not reviewing every request. Use rules to be selective about what gets flagged.
+- **Only governs what flows through it.** If an agent bypasses the proxy (developer misconfiguration, direct API calls), Thundergate can't help. Enforce routing at the infrastructure level (egress policies, network rules).
+- **Not a prompt injection defense.** Thundergate doesn't see agent internals — only the HTTP requests that come out. Pair it with prompt-level defenses for defense in depth.
 
 ---
 

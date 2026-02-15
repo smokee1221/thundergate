@@ -54,9 +54,46 @@ If the database is down for more than 30 seconds, the proxy will be unable to lo
 
 ### Is this production-ready?
 
-Thundergate v0.1 is a fully functional MVP with a comprehensive feature set: proxy interception, rule evaluation, human-in-the-loop review, tamper-evident audit logging, and an operator dashboard. It's been tested with 92+ unit tests and load-tested to 500+ req/s.
+Thundergate v0.1 is a functional MVP with a full feature set: proxy interception, rule evaluation, human-in-the-loop review, tamper-evident audit logging, and an operator dashboard. It's been tested with 92+ unit tests and load-tested to 500+ req/s.
 
 That said, it's v0.1. See the [roadmap](../ARCHITECTURE.md) for post-MVP features like mTLS, multi-tenancy, and Helm charts. Evaluate against your requirements and security posture.
+
+---
+
+### Does this make my AI agents "safe"?
+
+No — and any tool that claims to is overpromising. Thundergate is a **defense-in-depth layer**, not a comprehensive safety solution. It catches dangerous HTTP-level actions (destructive methods, PII patterns, requests to unauthorized APIs) but it cannot catch:
+
+- Semantically valid but incorrect actions (e.g., charging the wrong customer with a correct API call)
+- Contextual PII leakage that doesn't match regex patterns (e.g., "send John's diagnosis to analytics")
+- Prompt injection or agent-internal reasoning errors
+- Harmful content in correctly-formatted payloads
+
+Think of it like a network firewall: it doesn't make your network "safe," but a network without one is reckless. Use Thundergate alongside prompt engineering, framework guardrails, and proper infrastructure security.
+
+---
+
+### Isn't this just a reverse proxy with a rule engine? How is it novel?
+
+Honestly, yes — at its core, Thundergate is a reverse proxy + rule engine + dashboard. The individual components (proxy, regex scanning, hash-chained logs, human approval workflows) are all well-established techniques.
+
+What's new is the **specialization and packaging**: these components are integrated into a single tool purpose-built for AI agent governance, with agent-aware authentication, per-agent rate limiting, connection holding for human review, and a dashboard designed for the operator workflow. You could build this yourself by combining Envoy + ModSecurity + a custom UI — Thundergate saves you that effort.
+
+---
+
+### Can regex really catch PII effectively?
+
+Regex catches **structured PII patterns** well: Social Security numbers, email addresses, phone numbers, credit card numbers. It's fast and has zero false negatives for well-defined patterns.
+
+Where regex falls short is **contextual or unstructured PII**: names, medical information, or sensitive details that don't follow a fixed pattern. For those, you'd need NLP or LLM-based scanning, which is on the post-MVP roadmap as an optional enhancement. In the meantime, regex-based scanning is a meaningful first line of defense — it catches a large category of accidental PII leakage.
+
+---
+
+### Does human-in-the-loop review scale?
+
+Not infinitely. HITL is designed for **targeted, high-risk flagging** — the kind of requests where you genuinely want a human to look before execution (financial transactions, PII-containing payloads, destructive operations).
+
+If you flag every request, operators will drown. The key is writing rules that are selective: flag DELETE on critical endpoints, flag requests to financial APIs, flag payloads matching PII patterns — but allow routine GETs to pass through automatically. At that point, you're reviewing tens to hundreds of items per day, which is manageable.
 
 ---
 
