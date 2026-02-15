@@ -81,11 +81,9 @@ As AI agents gain the ability to call APIs, send emails, execute transactions, a
 - **API target management** — Define downstream APIs with risk tiers, test connectivity
 - **Role-based access** — ADMIN, OPERATOR, VIEWER roles with scoped permissions
 
-<!-- TODO: Add dashboard screenshots
 <p align="center">
-  <img src="assets/dashboard_overview.png" alt="Thundergate Dashboard — Live metrics, rule management, HITL queue" width="800" />
+  <img src="assets/dashboard_screenshot.png" alt="Thundergate Dashboard — Live metrics, recent activity feed, and top triggered rules" width="800" />
 </p>
--->
 
 ### Security & Compliance
 - **Tamper-evident audit logs** — SHA-256 hash chain (each entry hashes the previous)
