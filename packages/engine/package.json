@@ -1,0 +1,36 @@
+{
+  "name": "@thundergate/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic rule evaluation engine with URL, method, payload, and header matching",
+  "author": "Dimitar Ruskov",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "vitest watch",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "picomatch": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "@types/picomatch": "^3.0.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

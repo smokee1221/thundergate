@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 5%;
+    --primary: 160 82% 35%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 160 82% 35%;
+    --radius: 0.5rem;
+    --success: 160 82% 35%;
+    --warning: 38 92% 50%;
+    --chart-1: 160 82% 35%;
+    --chart-2: 210 100% 56%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 270 60% 55%;
+  }
+
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 93%;
+    --card: 0 0% 8.5%;
+    --card-foreground: 0 0% 93%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 160 82% 35%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 85%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 93%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 160 82% 35%;
+    --success: 160 82% 35%;
+    --warning: 38 92% 50%;
+    --chart-1: 160 82% 35%;
+    --chart-2: 210 100% 56%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 270 60% 55%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Smooth transitions on interactive elements */
+  a,
+  button,
+  [role='button'] {
+    @apply transition-colors duration-150;
+  }
+
+  /* Selection color */
+  ::selection {
+    background: hsl(160 82% 35% / 0.3);
+  }
+
+  /* Range slider accent */
+  input[type='range'] {
+    accent-color: hsl(var(--primary));
+  }
+
+  /* Focus-visible ring consistency */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+/* Custom scrollbar — thin & dark */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}

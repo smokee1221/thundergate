@@ -1,0 +1,12 @@
+node_modules
+.git
+.env
+*.md
+*.log
+dist
+.next
+e2e
+playwright-report
+test-results
+coverage
+.turbo

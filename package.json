@@ -1,0 +1,62 @@
+{
+  "name": "thundergate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Thundergate — real-time execution firewall for autonomous AI agents",
+  "author": "Dimitar Ruskov",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dimitarrskv/thundergate.git"
+  },
+  "homepage": "https://github.com/dimitarrskv/thundergate#readme",
+  "bugs": {
+    "url": "https://github.com/dimitarrskv/thundergate/issues"
+  },
+  "keywords": [
+    "thundergate",
+    "ai-agents",
+    "firewall",
+    "ai-safety",
+    "llm",
+    "proxy",
+    "human-in-the-loop",
+    "audit-log",
+    "rule-engine"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "test:coverage": "turbo test:coverage",
+    "test:e2e": "turbo test:e2e",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint:fix",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"packages/*/src/**/*.{ts,tsx}\"",
+    "typecheck": "turbo typecheck",
+    "load-test": "node scripts/load-test.mjs",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up --build",
+    "db:generate": "pnpm --filter @thundergate/db db:generate",
+    "db:migrate": "pnpm --filter @thundergate/db db:migrate",
+    "db:seed": "pnpm --filter @thundergate/db db:seed",
+    "db:reset": "pnpm --filter @thundergate/db db:reset",
+    "db:studio": "pnpm --filter @thundergate/db db:studio",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "autocannon": "^8.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.4.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

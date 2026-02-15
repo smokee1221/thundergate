@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: thundergate
+      POSTGRES_PASSWORD: ${TG_DB_PASSWORD:-thundergate}
+      POSTGRES_DB: thundergate
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U thundergate -d thundergate']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  proxy:
+    build:
+      context: .
+      dockerfile: packages/proxy/Dockerfile
+    ports:
+      - '3001:3001'
+    environment:
+      TG_DATABASE_URL: postgresql://thundergate:${TG_DB_PASSWORD:-thundergate}@postgres:5432/thundergate
+      TG_PROXY_PORT: '3001'
+      TG_PROXY_HOST: '0.0.0.0'
+      TG_MAX_PAYLOAD_SIZE: '1048576'
+      TG_DEFAULT_RATE_LIMIT: '100'
+      TG_HITL_TIER1_TIMEOUT_MS: '300000'
+      TG_HITL_TIER2_TIMEOUT_MS: '900000'
+      TG_LOG_LEVEL: info
+      TG_NEXTAUTH_URL: http://dashboard:3000
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3001/health']
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: packages/dashboard/Dockerfile
+    ports:
+      - '3000:3000'
+    environment:
+      TG_DATABASE_URL: postgresql://thundergate:${TG_DB_PASSWORD:-thundergate}@postgres:5432/thundergate
+      TG_NEXTAUTH_SECRET: ${TG_NEXTAUTH_SECRET:-change-me-to-a-random-32-char-string}
+      TG_NEXTAUTH_URL: ${TG_NEXTAUTH_URL:-http://localhost:3000}
+      TG_PROXY_URL: http://proxy:3001
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/api/auth/session']
+      interval: 10s
+      timeout: 3s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  pgdata:

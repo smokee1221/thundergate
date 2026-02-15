@@ -1,0 +1,842 @@
+openapi: 3.0.3
+info:
+  title: Thundergate API
+  description: |
+    Thundergate — a real-time execution firewall between autonomous AI agents
+    and external APIs. Provides rule-based evaluation, human-in-the-loop
+    review, and tamper-evident audit logging.
+  version: 0.1.0
+  contact:
+    name: Thundergate Team
+
+servers:
+  - url: http://localhost:3001
+    description: Proxy (Agent-facing API)
+  - url: http://localhost:3000
+    description: Dashboard (Operator-facing API)
+
+tags:
+  - name: proxy
+    description: Agent-facing proxy endpoints
+  - name: queue
+    description: HITL queue management
+  - name: agents
+    description: Agent registration and management
+  - name: rules
+    description: Firewall rule CRUD
+  - name: audit
+    description: Audit log explorer
+  - name: targets
+    description: API target management
+
+paths:
+  # ─── Proxy (port 3001) ─────────────────────────────────
+  /health:
+    get:
+      tags: [proxy]
+      summary: Health check
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /proxy/{path}:
+    post:
+      tags: [proxy]
+      summary: Proxy a request through the firewall
+      description: |
+        Forwards agent requests to the target API after rule evaluation.
+        Requires X-Agent-Key and X-Target-URL headers.
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Agent-Key
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Agent API key for authentication
+        - name: X-Target-URL
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: Base URL of the target API
+        - name: X-Firewall-Mode
+          in: header
+          schema:
+            type: string
+            enum: [async]
+          description: Set to "async" to get 202 instead of connection hold
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Request allowed and forwarded
+        '202':
+          description: Request queued for review (async mode)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueuedResponse'
+        '400':
+          description: Missing X-Target-URL header
+        '401':
+          description: Invalid or missing API key
+        '403':
+          description: Request blocked by rule or rejected by operator
+        '408':
+          description: Review timeout
+        '429':
+          description: Rate limit exceeded
+        '502':
+          description: Target API unreachable
+
+  # ─── Queue (port 3001) ─────────────────────────────────
+  /queue/{queueId}/decide:
+    post:
+      tags: [queue]
+      summary: Submit operator decision on a queue item
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [APPROVED, MODIFIED, REJECTED]
+                notes:
+                  type: string
+                modifiedPayload:
+                  type: object
+      responses:
+        '200':
+          description: Decision recorded
+
+  # ─── Dashboard API — Queue (port 3000) ──────────────────
+  /api/queue:
+    get:
+      tags: [queue]
+      summary: List HITL queue items
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, CLAIMED, APPROVED, MODIFIED, REJECTED, ESCALATED, EXPIRED]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Paginated queue items
+
+  /api/queue/stats:
+    get:
+      tags: [queue]
+      summary: Get queue statistics (pending, claimed, escalated counts)
+      responses:
+        '200':
+          description: Queue statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pending:
+                    type: integer
+                  claimed:
+                    type: integer
+                  escalated:
+                    type: integer
+                  resolvedToday:
+                    type: integer
+                  avgResolutionMs:
+                    type: number
+                    nullable: true
+
+  /api/queue/{id}:
+    get:
+      tags: [queue]
+      summary: Get queue item detail with audit log context
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Queue item with audit log
+        '404':
+          description: Queue item not found
+
+  /api/queue/{id}/claim:
+    post:
+      tags: [queue]
+      summary: Claim a queue item for review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Item claimed successfully
+        '409':
+          description: Item already claimed
+
+  /api/queue/{id}/decide:
+    post:
+      tags: [queue]
+      summary: Submit decision on a claimed queue item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [APPROVED, MODIFIED, REJECTED]
+                notes:
+                  type: string
+                modifiedPayload:
+                  type: object
+      responses:
+        '200':
+          description: Decision recorded
+
+  /api/audit/filters:
+    get:
+      tags: [audit]
+      summary: Get available filter options for audit log explorer
+      responses:
+        '200':
+          description: Filter options (agents, decisions, date range)
+
+  # ─── Dashboard API (port 3000) ──────────────────────────
+  /api/agents:
+    get:
+      tags: [agents]
+      summary: List all registered agents
+      responses:
+        '200':
+          description: Array of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Agent'
+    post:
+      tags: [agents]
+      summary: Register a new agent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Agent created with API key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  apiKey:
+                    type: string
+                    description: Plain-text API key (shown once)
+
+  /api/agents/{id}:
+    get:
+      tags: [agents]
+      summary: Get agent detail with statistics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Agent detail
+        '404':
+          description: Agent not found
+
+  /api/agents/{id}/toggle:
+    post:
+      tags: [agents]
+      summary: Activate or deactivate an agent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Agent status updated
+
+  /api/agents/{id}/rotate-key:
+    post:
+      tags: [agents]
+      summary: Rotate agent API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: New API key generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+
+  /api/rules:
+    get:
+      tags: [rules]
+      summary: List all firewall rules
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [ALLOW, BLOCK, FLAG_FOR_REVIEW, MODIFY]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        - name: enabled
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Array of rules
+    post:
+      tags: [rules]
+      summary: Create a new rule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleInput'
+      responses:
+        '201':
+          description: Rule created
+
+  /api/rules/{id}:
+    get:
+      tags: [rules]
+      summary: Get rule detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Rule detail
+    put:
+      tags: [rules]
+      summary: Update a rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RuleInput'
+      responses:
+        '200':
+          description: Rule updated
+
+  /api/rules/{id}/toggle:
+    post:
+      tags: [rules]
+      summary: Enable or disable a rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Rule status updated
+
+  /api/rules/test:
+    post:
+      tags: [rules]
+      summary: Dry-run rule evaluation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method, url]
+              properties:
+                method:
+                  type: string
+                url:
+                  type: string
+                headers:
+                  type: object
+                body:
+                  type: object
+      responses:
+        '200':
+          description: Evaluation result
+
+  /api/audit:
+    get:
+      tags: [audit]
+      summary: List audit logs with filters
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: agentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: decision
+          in: query
+          schema:
+            type: string
+            enum: [ALLOW, BLOCK, FLAG_FOR_REVIEW, MODIFY]
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, riskScore, latencyMs]
+        - name: sortDir
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditLog'
+                  total:
+                    type: integer
+
+  /api/audit/{id}:
+    get:
+      tags: [audit]
+      summary: Get audit log detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Full audit log entry
+
+  /api/audit/verify:
+    post:
+      tags: [audit]
+      summary: Verify hash chain integrity
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dateFrom:
+                  type: string
+                  format: date-time
+                dateTo:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  checked:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+
+  /api/audit/export:
+    get:
+      tags: [audit]
+      summary: Export audit logs as CSV or JSON
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: json
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: File download
+
+  /api/targets:
+    get:
+      tags: [targets]
+      summary: List API targets
+      responses:
+        '200':
+          description: Array of targets
+    post:
+      tags: [targets]
+      summary: Create a new API target
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TargetInput'
+      responses:
+        '201':
+          description: Target created
+
+  /api/targets/{id}:
+    get:
+      tags: [targets]
+      summary: Get target detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Target detail
+    put:
+      tags: [targets]
+      summary: Update a target
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Target updated
+
+  /api/targets/test:
+    post:
+      tags: [targets]
+      summary: Test connectivity to a URL
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Connectivity result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  statusCode:
+                    type: integer
+                  latencyMs:
+                    type: integer
+                  error:
+                    type: string
+
+components:
+  schemas:
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        requestCount24h:
+          type: integer
+        lastActiveAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    RuleInput:
+      type: object
+      required: [name, priority, conditions, action, severity]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 1000
+        conditions:
+          type: object
+          properties:
+            url_pattern:
+              type: string
+            methods:
+              type: array
+              items:
+                type: string
+                enum: [GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS]
+            payload_patterns:
+              type: array
+              items:
+                type: string
+            header_patterns:
+              type: object
+            agent_ids:
+              type: array
+              items:
+                type: string
+                format: uuid
+            risk_score_threshold:
+              type: integer
+              minimum: 0
+              maximum: 100
+        action:
+          type: string
+          enum: [ALLOW, BLOCK, FLAG_FOR_REVIEW, MODIFY]
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+        enabled:
+          type: boolean
+          default: true
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequenceNumber:
+          type: integer
+        agentId:
+          type: string
+          format: uuid
+        agentName:
+          type: string
+        requestMethod:
+          type: string
+        requestUrl:
+          type: string
+        riskScore:
+          type: integer
+        engineDecision:
+          type: string
+          enum: [ALLOW, BLOCK, FLAG_FOR_REVIEW, MODIFY]
+        humanDecision:
+          type: string
+          enum: [APPROVED, MODIFIED, REJECTED, EXPIRED]
+          nullable: true
+        latencyMs:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    TargetInput:
+      type: object
+      required: [name, baseUrl]
+      properties:
+        name:
+          type: string
+        baseUrl:
+          type: string
+          format: uri
+        riskTier:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, CRITICAL]
+          default: MEDIUM
+        headers:
+          type: object
+
+    QueuedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: QUEUED_FOR_REVIEW
+        queueId:
+          type: string
+          format: uuid
+        auditLogId:
+          type: string
+          format: uuid
+        riskScore:
+          type: integer
+        reasons:
+          type: array
+          items:
+            type: string
+
+  securitySchemes:
+    AgentApiKey:
+      type: apiKey
+      in: header
+      name: X-Agent-Key
+      description: Agent API key for proxy authentication
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: Dashboard session cookie (NextAuth)
