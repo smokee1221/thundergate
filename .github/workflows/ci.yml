@@ -60,6 +60,9 @@ jobs:
       - name: Run migrations
         run: pnpm --filter @thundergate/db db:migrate
 
+      - name: Seed test data
+        run: pnpm --filter @thundergate/db db:seed
+
       - name: Test
         run: pnpm test
 
